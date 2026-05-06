@@ -1,4 +1,4 @@
-import { Mongoose, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 import jwt from "jsonwebtoken"
 import bcrypt from "bcrypt"
@@ -7,19 +7,19 @@ const userSchema = new Schema(
     {
         name: String,
         email: {
-            type:String,
-            required:true,
-            unique:true,
-            lowercase:true,
-            trim:true
+            type: String,
+            required: true,
+            unique: true,
+            lowercase: true,
+            trim: true
         },
         phoneNumber: {
-            type:String,
-            required:true
+            type: String,
+            required: true
         },
-        password:{
-            type:String,
-            required:true
+        password: {
+            type: String,
+            required: true
         },
         role: {
             type: String,
@@ -35,44 +35,60 @@ const userSchema = new Schema(
                 return this.role === "staff";
             }
         },
-        category:{
-            type:String,
-            enum:["chef","waiter","receptionist","cleaning"],
-            default:'',
-            required:true
+        category: {
+            type: String,
+            enum: ["chef", "waiter", "receptionist", "cleaning"],
+            required: function () {
+                return this.role === "staff";
+            }
         },
-        businessId : String,
-        departmentId:String,
-         refreshToken: {
+
+        businessId: {
+            type: Schema.Types.ObjectId,
+            ref: "Business"
+        },
+
+        departmentId: {
+            type: Schema.Types.ObjectId,
+            ref: "Department"
+        },
+        refreshToken: {
             type: String
         },
-        isActive:Boolean,
-        isVerfied:Boolean
+        isActive: {
+            type: Boolean,
+            default: true
+        },
+
+        isVerified: {
+            type: Boolean,
+            default: false
+        }
     },
     {
-        timestamps:true
+        timestamps: true
     }
 )
 
 userSchema.pre("save", async function (next) {
-    if(!this.isModified("password")) return next();
+    if (!this.isModified("password")) return next();
 
     this.password = await bcrypt.hash(this.password, 10)
     next()
 })
 
-userSchema.methods.isPasswordCorrect = async function(password){
+userSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.password)
 }
 
-userSchema.methods.generateAccessToken = function(){
-    
-            
+userSchema.methods.generateAccessToken = function () {
+
+
     return jwt.sign(
         {
             _id: this._id,
             email: this.email,
-            name:this.name
+            name: this.name
         },
         process.env.ACCESS_TOKEN_SECERET,
         {
@@ -82,11 +98,11 @@ userSchema.methods.generateAccessToken = function(){
 }
 
 
-userSchema.methods.generateRefreshToken = function(){
+userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         {
             _id: this._id,
-            
+
         },
         process.env.REFRESH_TOKEN_SECRET,
         {
